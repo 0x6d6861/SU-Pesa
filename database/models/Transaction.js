@@ -8,4 +8,4 @@ var Transaction = bookshelf.Model.extend({
 
 }, {});
 
-module.exports = Bookshelf.model('Transaction', Transaction);
+module.exports = bookshelf.model('Transaction', Transaction);
