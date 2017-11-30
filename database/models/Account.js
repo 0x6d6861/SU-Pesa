@@ -1,4 +1,5 @@
 var bookshelf = require('../index');
+var Transaction = require('./Transaction');
 var Account = bookshelf.Model.extend({
     tableName: 'accounts',
     hasTimestamps: true,
@@ -6,9 +7,9 @@ var Account = bookshelf.Model.extend({
         return this.belongsTo('Subscriber', 'subscriber_id');
     },
     transactions: function() {
-        return this.hasMany('Transaction', 'account_id');
+        return this.hasMany(Transaction, 'account_id');
     },
 
 }, {});
 
-module.exports = bookshelf.model('Account', Account);
+module.exports = Account;
