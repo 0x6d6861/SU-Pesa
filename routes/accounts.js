@@ -5,12 +5,15 @@ var Subscriber = require('../database/models/Subscriber');
 var Account = require('../database/models/Account');
 var Transaction = require('../database/models/Transaction');
 
+var sms = require('../inc/AfricasTalking');
+
+
 router.post('/transact', function(req, res, next) {
     
-    var pin = req.param.pin;
-    var phoneNumber = req.param.phoneNumber;
-    var amount = req.param.amount;
-    var type = req.param.type;
+    var pin = req.body.pin;
+    var phoneNumber = req.body.phoneNumber;
+    var amount = req.body.amount;
+    var type = req.body.type;
     
     new Subscriber({
         pin: pin,
@@ -19,7 +22,7 @@ router.post('/transact', function(req, res, next) {
     .then(function(subscriber) {
             
             if(!subscriber){
-                res.send({success: false, message: "Wrong PIN or no account by that number"}.toJSON());
+                res.send({success: false, message: "Wrong PIN or no account by that number"});
             }
             
             new Account({
@@ -51,7 +54,7 @@ router.post('/transact', function(req, res, next) {
                         var transaction_code = "RAANDOM";
                         
                         if(type == "transfer"){
-                            var to = req.param.to;
+                            var to = req.body.to;
                             new Subscriber({
                                 pin: pin,
                                 phoneNumber: to
@@ -63,9 +66,40 @@ router.post('/transact', function(req, res, next) {
                                         account.save(params, {
                                             method: 'update',
                                             patch: true
-                                        }).then(function(account){
+                                        }).then(function (account) {
+                                            var from = {
+                                                from: "SUPesa",
+                                                to: phoneNumber,
+                                                message: `You have sent KSH${amount} to ${to}.\n
+                                                    Transaction code: ${transaction_code}\n
+                                                    Balance: ${account.amount}`
+                                            };
+
+                                            var to = {
+                                                from: "SUPesa",
+                                                to: to,
+                                                message: `You have received KSH${amount} from ${phoneNumber}.\n
+                                                    Transaction code: ${transaction_code}\n
+                                                    Balance: ${account.amount}`
+                                            };
+
+                                            sms.send(to)
+                                                .then((success) => {
+                                                    console.log(success);
+                                                })
+                                                .catch((error) => {
+                                                    console.log(error.message);
+                                                });
+
+                                            sms.send(from)
+                                                .then((success) => {
+                                                    console.log(success);
+                                                })
+                                                .catch((error) => {
+                                                    console.log(error.message);
+                                                });
                                             // send sms to both useers
-                                            res.send({success: true, message: "Money Transfered", code: transaction_code}.toJSON());
+                                            res.send({success: true, message: "Money Transfered", code: transaction_code});
                                         });
                                     });
                             });
@@ -74,9 +108,30 @@ router.post('/transact', function(req, res, next) {
                                 type: type,
                                 amount: amount,
                                 code: transaction_code
-                            }).save().then(function () {
-                                // TODO: Send sms to the users
-                                res.send({success: true, message: "Transaction was succesful", code: transaction_code}.toJSON())
+                            }).save().then(function (transaction) {
+                                var to = {
+                                    from: "SUPesa",
+                                    to: phoneNumber,
+                                    message: null
+                                };
+                                if (type == "deposit") {
+                                    to.message = `You have received KSH ${amount} from ${phoneNumber}.\n
+                                                    Transaction code: ${transaction_code}\n
+                                                    Balance: ${account.amount}`;
+                                } else if (type == "withdrawal") {
+                                    to.message = `You have withdrawn KSH ${amount} from ${phoneNumber}.\n
+                                                    Transaction code: ${transaction_code}\n
+                                                    Balance: ${account.amount}`;
+                                }
+
+                                sms.send(to)
+                                    .then((success) => {
+                                        console.log(success);
+                                    })
+                                    .catch((error) => {
+                                        console.log(error.message);
+                                    });
+                                res.send({success: true, message: to.message, code: transaction_code})
                             });
                         }
                         
@@ -93,8 +148,8 @@ router.post('/transact', function(req, res, next) {
 
 router.get('/transactions', function (req, res, next) {
 
-    var pin = req.param.pin;
-    var phoneNumber = req.param.phoneNumber;
+    var pin = req.body.pin;
+    var phoneNumber = req.body.phoneNumber;
 
     new Subscriber({
         pin: pin,
@@ -114,7 +169,7 @@ router.get('/transactions', function (req, res, next) {
                 ],
                 columns: ['id', 'type', 'amount']
                 }).then(function (account) {
-                    res.send(account.toJSON());
+                    res.send(account);
             });
     }).catch(function(error) {
       console.log(error);

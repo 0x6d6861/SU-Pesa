@@ -4,6 +4,7 @@ exports.up = function(knex, Promise) {
         table.increments();
         table.string('type'); // Type (withdrwa, deposit, transfer)
         table.integer('amount');
+        table.string('code');
         table.integer('account_id').unsigned();
         table.foreign('account_id')
             .references('id')
