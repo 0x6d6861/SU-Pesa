@@ -8,9 +8,10 @@ var Transaction = require('../database/models/Transaction');
 var sms = require('../inc/AfricasTalking');
 
 router.get("/test", function (req, res, next) {
-    res.send({
-        test: "test message",
-        params: req.body
+    new Transaction({
+        phoneNumber: "+254772369355"
+    }).fetch().then(function(TO_subscriber){
+        res.send(TO_subscriber);
     });
 })
 

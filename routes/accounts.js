@@ -14,7 +14,7 @@ router.post('/transact', function(req, res, next) {
     var phoneNumber = req.body.phoneNumber;
     var amount = req.body.amount;
     var type = req.body.type;
-    
+    //console.log(type);
     new Subscriber({
         pin: pin,
         phoneNumber: phoneNumber
@@ -30,22 +30,24 @@ router.post('/transact', function(req, res, next) {
             }).fetch().then(function(account){
                 if (account) {
                     // pass params to save instead of set()
+                   
                     
                     switch(type) {
                         case "deposit":
-                            var params = { 'amount' : account.amount + amount };
+                            var params = { 'amount' : Number(account.get('amount')) + amount };
                             break;
                         case "withdrawal":
                             // TODO: Compute charge
-                            var params = { 'amount' : account.amount - amount };
+                            var params = { 'amount' : Number(account.get('amount')) - amount };
                             break;
                         case "transfer":
-                            var params = { 'amount' : account.amount - amount };
+                            var params = { 'amount' : Number(account.get('amount')) - amount };
                             break;
                         default:
                             res.send({success: false, message: "need to provide type of transaction"});
                     }
-                    
+                    //console.log(params);
+                    // console.log(account.get('amount'));
                     account.save(params, {
                         method: 'update',
                         patch: true
@@ -54,33 +56,39 @@ router.post('/transact', function(req, res, next) {
                         var transaction_code = "RAANDOM";
                         
                         if(type == "transfer"){
-                            var to = req.body.to;
+                            var to_sub = req.body.to;
+                            console.log(to_sub);
                             new Subscriber({
-                                pin: pin,
-                                phoneNumber: to
-                            }).fetch().then(function(to){
+                                phoneNumber: to_sub
+                            }).fetch().then(function(TO_subscriber){
+                                    
+                                if(!TO_subscriber){
+                                    res.send({success: false, message: "The subscriber does not exist!"});
+                                }
+                                
                                  new Account({
-                                        subscriber_id: to.id
-                                    }).fetch().then(function(account){
-                                        var params = { 'amount' : account.amount + amount };
-                                        account.save(params, {
+                                        subscriber_id: TO_subscriber.get('id')
+                                    }).fetch().then(function(to_account){
+                                        
+                                        var params = { 'amount' : Number(to_account.get('amount')) + amount };
+                                        to_account.save(params, {
                                             method: 'update',
                                             patch: true
-                                        }).then(function (account) {
+                                        }).then(function (to_account) {
                                             var from = {
                                                 from: "SUPesa",
                                                 to: phoneNumber,
-                                                message: `You have sent KSH${amount} to ${to}.\n
-                                                    Transaction code: ${transaction_code}\n
-                                                    Balance: ${account.amount}`
+                                                message: `You have sent KSH${amount} to ${to}.
+                                                    Transaction code: ${transaction_code}
+                                                    Balance: ${account.get('amount')}`
                                             };
 
                                             var to = {
                                                 from: "SUPesa",
                                                 to: to,
-                                                message: `You have received KSH${amount} from ${phoneNumber}.\n
-                                                    Transaction code: ${transaction_code}\n
-                                                    Balance: ${account.amount}`
+                                                message: `You have received KSH${amount} from ${phoneNumber}.
+                                                    Transaction code: ${transaction_code}
+                                                    Balance: ${to_account.get('amount')}`
                                             };
 
                                             sms.send(to)
@@ -115,13 +123,13 @@ router.post('/transact', function(req, res, next) {
                                     message: null
                                 };
                                 if (type == "deposit") {
-                                    to.message = `You have received KSH ${amount} from ${phoneNumber}.\n
-                                                    Transaction code: ${transaction_code}\n
-                                                    Balance: ${account.amount}`;
+                                    to.message = `You have deposited KSH ${amount} from ${phoneNumber}.
+                                                    Transaction code: ${transaction_code}
+                                                    Balance: ${account.get('amount')}`;
                                 } else if (type == "withdrawal") {
-                                    to.message = `You have withdrawn KSH ${amount} from ${phoneNumber}.\n
-                                                    Transaction code: ${transaction_code}\n
-                                                    Balance: ${account.amount}`;
+                                    to.message = `You have withdrawn KSH ${amount} from ${phoneNumber}.
+                                                    Transaction code: ${transaction_code}
+                                                    Balance: ${account.get('amount')}`;
                                 }
 
                                 sms.send(to)
@@ -167,7 +175,6 @@ router.get('/transactions', function (req, res, next) {
 
                     }
                 ],
-                columns: ['id', 'type', 'amount']
                 }).then(function (account) {
                     res.send(account);
             });
