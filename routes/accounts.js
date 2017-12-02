@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+var randomstring = require("randomstring");
 
 var Subscriber = require('../database/models/Subscriber');
 var Account = require('../database/models/Account');
@@ -53,7 +54,12 @@ router.post('/transact', function(req, res, next) {
                         patch: true
                     }).then(function(account){
                         
-                        var transaction_code = "RAANDOM";
+                        var transaction_code = randomstring.generate({
+                            charset: 'alphabetic',
+                            readable: true,
+                            length: 7,
+                            capitalization: 'uppercase'
+                        });
                         
                         if(type == "transfer"){
                             var to_sub = req.body.to;
@@ -69,31 +75,31 @@ router.post('/transact', function(req, res, next) {
                                  new Account({
                                         subscriber_id: TO_subscriber.get('id')
                                     }).fetch().then(function(to_account){
-                                        
+                                        //console.log(to_account);
                                         var params = { 'amount' : Number(to_account.get('amount')) + amount };
                                         to_account.save(params, {
                                             method: 'update',
                                             patch: true
                                         }).then(function (to_account) {
+                                            //console.log(to_account);
                                             var from = {
                                                 from: "SUPesa",
                                                 to: phoneNumber,
-                                                message: `You have sent KSH${amount} to ${to}.
-                                                    Transaction code: ${transaction_code}
-                                                    Balance: ${account.get('amount')}`
+                                                message: `You have sent KSH${amount} to ${TO_subscriber.get('name')}. Transaction code: ${transaction_code}. Balance: ${account.get('amount')}`
                                             };
 
                                             var to = {
                                                 from: "SUPesa",
-                                                to: to,
-                                                message: `You have received KSH${amount} from ${phoneNumber}.
+                                                to: TO_subscriber.get('phoneNumber'),
+                                                message: `You have received KSH${amount} from ${subscriber.get('name')}.
                                                     Transaction code: ${transaction_code}
                                                     Balance: ${to_account.get('amount')}`
                                             };
 
                                             sms.send(to)
                                                 .then((success) => {
-                                                    console.log(success);
+                                                    //console.log(success);
+            
                                                 })
                                                 .catch((error) => {
                                                     console.log(error.message);
@@ -101,13 +107,28 @@ router.post('/transact', function(req, res, next) {
 
                                             sms.send(from)
                                                 .then((success) => {
-                                                    console.log(success);
+                                                    //console.log(success);
                                                 })
                                                 .catch((error) => {
                                                     console.log(error.message);
                                                 });
                                             // send sms to both useers
-                                            res.send({success: true, message: "Money Transfered", code: transaction_code});
+
+                                            new Transaction({
+                                                type: type,
+                                                amount: amount,
+                                                code: transaction_code,
+                                                account_id: account.get("id")
+                                            }).save().then(function (transaction) { 
+                                                res.send({
+                                                    success: true, message: "Money Transfered", to: {
+                                                        phoneNumber: TO_subscriber.get('phoneNumber'),
+                                                        name: TO_subscriber.get('name')
+                                                    },
+                                                    code: transaction_code
+                                                });
+                                            });
+
                                         });
                                     });
                             });
@@ -115,6 +136,7 @@ router.post('/transact', function(req, res, next) {
                             new Transaction({
                                 type: type,
                                 amount: amount,
+                                account_id: account.get("id"),
                                 code: transaction_code
                             }).save().then(function (transaction) {
                                 var to = {
@@ -123,13 +145,9 @@ router.post('/transact', function(req, res, next) {
                                     message: null
                                 };
                                 if (type == "deposit") {
-                                    to.message = `You have deposited KSH ${amount} from ${phoneNumber}.
-                                                    Transaction code: ${transaction_code}
-                                                    Balance: ${account.get('amount')}`;
+                                    to.message = `You have deposited KSH ${amount} to ${phoneNumber}. Transaction code: ${transaction_code}. Balance: ${account.get('amount')}`;
                                 } else if (type == "withdrawal") {
-                                    to.message = `You have withdrawn KSH ${amount} from ${phoneNumber}.
-                                                    Transaction code: ${transaction_code}
-                                                    Balance: ${account.get('amount')}`;
+                                    to.message = `You have withdrawn KSH ${amount} from ${phoneNumber}. Transaction code: ${transaction_code}. Balance: ${account.get('amount')}`;
                                 }
 
                                 sms.send(to)
