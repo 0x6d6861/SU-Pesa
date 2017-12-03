@@ -9,6 +9,7 @@ var index = require('./routes/index');
 var users = require('./routes/users');
 var subscribers = require('./routes/subscribers');
 var accounts = require('./routes/accounts');
+var ussd = require('./routes/ussd');
 
 
 var app = express();
@@ -29,6 +30,7 @@ app.use('/', index);
 app.use('/users', users);
 app.use('/subscribers', subscribers);
 app.use('/accounts', accounts);
+app.use('/ussd', ussd);
 
 
 
