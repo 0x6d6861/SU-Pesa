@@ -8,26 +8,42 @@ var menu = new UssdMenu();
 menu.startState({
 	run: () => {
 		// use menu.con() to send response without terminating session       
-		menu.con('Welcome. Choose option:' +
-			'\n1. Show Balance' +
-			'\n2. Buy Airtime');
+		menu.con('Welcome to SUPesa. Choose option:' +
+			'\n1. Send Money' +
+			'\n2. Withdraw Cash' +
+			'\n3. Deposit Cash' +
+			'\n4. Show Balance');
 	},
 	// next object links to next state based on user input 
 	next: {
-		'1': 'showBalance',
-		'2': 'buyAirtime'
+		'1': 'sendMoney',
+		'2': 'withdrawCash',
+		'3': 'depositCash',
+		'4': 'showBalance'
 	}
 });
 
-menu.state('showBalance', {
+menu.state('sendMoney', {
 	run: () => {
 		// fetch balance 
 		/* fetchBalance(menu.args.phoneNumber).then(function (bal) {
 			// use menu.end() to send response and terminate session 
 			menu.end('Your balance is KES ' + bal);
 		}); */
-
-		menu.end("Show Balance");
+		menu.con("Enter recipient phone number: ")
+	},
+	next: {
+		'*\\d+': 'sendMoney.recipient'
+	}
+});
+menu.state('sendMoney.recipient', {
+	run: () => {
+		// use menu.val to access user input value 
+		var recipient = Number(menu.val);
+		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
+			menu.end('Airtime bought successfully.');
+		}); */
+		menu.end("Person to receive the money " + recipient);
 	}
 });
 
