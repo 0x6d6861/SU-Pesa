@@ -1,8 +1,36 @@
 var express = require('express');
 var router = express.Router();
 
+var sessions = {};
+
 var UssdMenu = require('ussd-menu-builder');
 var menu = new UssdMenu();
+
+menu.sessionConfig({
+	start: (sessionId, callback) => {
+		// initialize current session if it doesn't exist 
+		// this is called by menu.run() 
+		if (!(sessionId in sessions)) sessions[sessionId] = {};
+		callback();
+	},
+	end: (sessionId, callback) => {
+		// clear current session 
+		// this is called by menu.end() 
+		delete sessions[sessionId];
+		callback();
+	},
+	set: (sessionId, key, value, callback) => {
+		// store key-value pair in current session 
+		sessions[sessionId][key] = value;
+		callback();
+	},
+	get: (sessionId, key) => {
+		return new Promise((resolve, reject) => {
+			let value = sessions[sessionId][key];
+			resolve(value);
+		});
+	}
+});
 
 // Define menu states 
 menu.startState({
