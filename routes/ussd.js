@@ -41,7 +41,6 @@ menu.state('sendMoney.recipient', {
 	run: () => {
 		// use menu.val to access user input value 
 		var recipient = Number(menu.val);
-		let session = getSession(menu.args.sessionId);
 		menu.session.set('recipient', recipient, (err) => {
 			menu.con("Please Provide your PIN number: ");
 		});
