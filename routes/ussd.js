@@ -1,7 +1,10 @@
 var express = require('express');
 var router = express.Router();
 
-var axios = require('axios');
+var axiosPLAIN = require('axios');
+var axios = axiosPLAIN.create({
+	baseURL: 'https://supesa.herokuapp.com/'
+});
 
 var PNF = require('google-libphonenumber').PhoneNumberFormat;
 var phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance();
@@ -74,19 +77,18 @@ menu.state('sendMoney', {
 });
 menu.state('sendMoney.recipient', {
 	run: () => {
-		// use menu.val to access user input value 
-		var phoneNumber = phoneUtil.parse(Number(menu.val), 'KE');
-		var recipient = phoneUtil.format(phoneNumber, PNF.E164);
+		// use menu.val to access user input value
+		/* var phoneNumber = phoneUtil.parse(Number(menu.val), 'KE');
+		var recipient = phoneUtil.format(phoneNumber, PNF.E164); */
+		var recipient = "+254" + Number(menu.val);
+		console.log(recipient);
 		menu.session.set('recipient', recipient, (err) => {
 			menu.con("Please Provide your PIN number: ");
 		});
-		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
-			menu.end('Airtime bought successfully.');
-		}); */
 		
 	},
 	next: {
-		'*\\d+': 'sendMoney.send'
+		'*\\d+': 'sendMoney.amount'
 	}
 });
 
@@ -95,7 +97,7 @@ menu.state('sendMoney.amount', {
 		// use menu.val to access user input value 
 		var amount = Number(menu.val);
 		menu.session.set('amount', amount, (err) => {
-			menu.con("Please Provide your PIN number: ");
+			menu.con("Please enter the amount to send: ");
 		});
 		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
 			menu.end('Airtime bought successfully.');
@@ -112,7 +114,9 @@ menu.state('sendMoney.send', {
 		// use menu.val to access user input value 
 		var pin = Number(menu.val);
 		menu.session.get('recipient').then(recipient => {
+			console.log(recipient);
 			menu.session.get('amount').then(amount => {
+				console.log(amount);
 				axios.post('/accounts/transact', {
 					pin: pin,
 					phoneNumber: menu.args.phoneNumber,
@@ -258,8 +262,8 @@ menu.state('showBalance.send', {
 			pin: pin,
 			phoneNumber: menu.args.phoneNumber
 		}).then(function (response) {
-			menu.end("Name: " + response.data.name + "\nBalance: " + response.data.account.amount)
-			// console.log(response);
+			//menu.end("Name: " + response.data.name + "\nBalance: " + response.data.account.amount)
+			console.log(response.data);
 		}).catch(function (error) {
 			console.log(error);
 		});
