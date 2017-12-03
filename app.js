@@ -32,7 +32,10 @@ app.use('/subscribers', subscribers);
 app.use('/accounts', accounts);
 app.use('/ussd', ussd);
 
-
+app.get('/test', (req, res, next) => {
+  var phoneNumber = phoneUtil.parse('700928129', 'KE');
+  res.send(phoneUtil.format(phoneNumber, PNF.E164));
+})
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

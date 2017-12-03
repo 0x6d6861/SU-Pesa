@@ -1,6 +1,11 @@
 var express = require('express');
 var router = express.Router();
 
+var axios = require('axios');
+
+var PNF = require('google-libphonenumber').PhoneNumberFormat;
+var phoneUtil = require('google-libphonenumber').PhoneNumberUtil.getInstance();
+
 var sessions = {};
 
 var UssdMenu = require('ussd-menu-builder');
@@ -52,6 +57,8 @@ menu.startState({
 	defaultNext: 'invalidOption'
 });
 
+
+// === Send Money section
 menu.state('sendMoney', {
 	run: () => {
 		// fetch balance 
@@ -68,7 +75,8 @@ menu.state('sendMoney', {
 menu.state('sendMoney.recipient', {
 	run: () => {
 		// use menu.val to access user input value 
-		var recipient = Number(menu.val);
+		var phoneNumber = phoneUtil.parse(Number(menu.val), 'KE');
+		var recipient = phoneUtil.format(phoneNumber, PNF.E164);
 		menu.session.set('recipient', recipient, (err) => {
 			menu.con("Please Provide your PIN number: ");
 		});
@@ -82,12 +90,44 @@ menu.state('sendMoney.recipient', {
 	}
 });
 
+menu.state('sendMoney.amount', {
+	run: () => {
+		// use menu.val to access user input value 
+		var amount = Number(menu.val);
+		menu.session.set('amount', amount, (err) => {
+			menu.con("Please Provide your PIN number: ");
+		});
+		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
+			menu.end('Airtime bought successfully.');
+		}); */
+
+	},
+	next: {
+		'*\\d+': 'sendMoney.send'
+	}
+});
+
 menu.state('sendMoney.send', {
 	run: () => {
 		// use menu.val to access user input value 
 		var pin = Number(menu.val);
 		menu.session.get('recipient').then(recipient => {
-			menu.end("your phone number is: " + recipient);
+			menu.session.get('amount').then(amount => {
+				axios.post('/accounts/transact', {
+					pin: pin,
+					phoneNumber: menu.args.phoneNumber,
+					type: "transfer",
+					amount: amount,
+					to: recipient
+				}).then(function (response) {
+					menu.end("KSH" + amount + " sent to " + response.data.to.name +"\nCode: " + response.data.code);
+
+						// console.log(response);
+				}).catch(function (error) {
+					console.log(error);
+				});
+			})
+			
         });
 		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
 			menu.end('Airtime bought successfully.');
@@ -99,29 +139,133 @@ menu.state('sendMoney.send', {
 		'*\\d+': 'sendMoney.send'
 	} */
 });
+// === END Send money section
 
-menu.state('buyAirtime', {
+// === Withdraw Cash section
+menu.state('withdrawCash', {
 	run: () => {
-		menu.con('Enter amount:');
+		menu.con('Enter amount to withdraw:');
 	},
 	next: {
 		// using regex to match user input to next state 
-		'*\\d+': 'buyAirtime.amount'
+		'*\\d+': 'withdrawCash.amount'
 	}
 });
-
-// nesting states 
-menu.state('buyAirtime.amount', {
+menu.state('withdrawCash.amount', {
 	run: () => {
 		// use menu.val to access user input value 
 		var amount = Number(menu.val);
+		menu.session.set('amount', amount, (err) => {
+			menu.con("Please Provide your PIN number: ");
+		});
 		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
 			menu.end('Airtime bought successfully.');
 		}); */
-		menu.end("Airtime Bought " + amount);
+
+	},
+	next: {
+		'*\\d+': 'withdrawCash.send'
+	}
+});
+menu.state('withdrawCash.send', {
+	run: () => {
+		// use menu.val to access user input value 
+		var pin = Number(menu.val);
+		menu.session.get('amount').then(amount => {
+			//TODO: add the callback for the widthdraw function
+			menu.session.get('amount').then(amount => {
+				axios.post('/accounts/transact', {
+					pin: pin,
+					phoneNumber: menu.args.phoneNumber,
+					type: "withdrawal",
+					amount: amount
+				}).then(function (response) {
+				menu.end("You have removed: KSH" + amount + "from your account\nCode: " + response.data.code);
+					// console.log(response);
+				}).catch(function (error) {
+					console.log(error);
+				});
+			})
+			//menu.end("your phone number is: " + recipient);
+		});
+	}
+});
+// === END Withdraw cash section
+
+// === Deposit cash section
+menu.state('depositCash', {
+	run: () => {
+		menu.con('Enter amount to Deposit:');
+	},
+	next: {
+		// using regex to match user input to next state 
+		'*\\d+': 'depositCash.amount'
+	}
+});
+menu.state('depositCash.amount', {
+	run: () => {
+		// use menu.val to access user input value 
+		var amount = Number(menu.val);
+		menu.session.set('amount', amount, (err) => {
+			menu.con("Please Provide your PIN number: ");
+		});
+		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
+			menu.end('Airtime bought successfully.');
+		}); */
+
+	},
+	next: {
+		'*\\d+': 'depositCash.send'
+	}
+});
+menu.state('depositCash.send', {
+	run: () => {
+		// use menu.val to access user input value 
+		var pin = Number(menu.val);
+		menu.session.get('amount').then(amount => {
+			axios.post('/accounts/transact', {
+				pin: pin,
+				phoneNumber: menu.args.phoneNumber,
+				type: "deposit",
+				amount: amount
+			}).then(function (response) {
+				menu.end("You have deposited: KSH" + amount + "\nCode: " + response.data.code);
+				//console.log(response);
+			}).catch(function (error) {
+				console.log(error);
+			});
+			//menu.end("your phone number is: " + recipient);
+		});
+	}
+});
+// === END Deposit Cash section
+
+// === Show Balance section 
+menu.state('showBalance', {
+	run: () => {
+		menu.con("Please provide your PIN to continue")
+	},
+	next: {
+		'*\\d+': 'showBalance.send'
 	}
 });
 
+menu.state('showBalance.send', {
+	run: () => {
+		// use menu.val to access user input value 
+		var pin = Number(menu.val);
+		axios.get('/subscribers/profile', {
+			pin: pin,
+			phoneNumber: menu.args.phoneNumber
+		}).then(function (response) {
+			menu.end("Name: " + response.data.name + "\nBalance: " + response.data.account.amount)
+			// console.log(response);
+		}).catch(function (error) {
+			console.log(error);
+		});
+	}
+});
+// === END Show Balance section
 
 router.post('/', (req, res, next) => {
 	menu.run(req.body, ussdResult => {
