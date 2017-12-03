@@ -42,11 +42,13 @@ menu.state('sendMoney.recipient', {
 		// use menu.val to access user input value 
 		var recipient = Number(menu.val);
 		let session = getSession(menu.args.sessionId);
-		session.set('recipient', recipient);
+		menu.session.set('recipient', recipient, (err) => {
+			menu.con("Please Provide your PIN number: ");
+		});
 		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
 			menu.end('Airtime bought successfully.');
 		}); */
-		menu.con("Please Provide your PIN number: ");
+		
 	},
 	next: {
 		'*\\d+': 'sendMoney.send'
@@ -57,13 +59,14 @@ menu.state('sendMoney.send', {
 	run: () => {
 		// use menu.val to access user input value 
 		var pin = Number(menu.val);
-		var session = getSession(menu.args.sessionId);
-		var recipient = session.get('recipient');
+		menu.session.get('recipient').then(recipient => {
+			menu.end("your phone number is: " + recipient);
+        });
 		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
 			menu.end('Airtime bought successfully.');
 		}); */
 		// menu.con("Please Provide your PIN number: ");
-		menu.end("your phone number is: " + recipient);
+		
 	},
 	/* next: {
 		'*\\d+': 'sendMoney.send'
