@@ -20,7 +20,8 @@ menu.startState({
 		'2': 'withdrawCash',
 		'3': 'depositCash',
 		'4': 'showBalance'
-	}
+	},
+	defaultNext: 'invalidOption'
 });
 
 menu.state('sendMoney', {
@@ -40,11 +41,33 @@ menu.state('sendMoney.recipient', {
 	run: () => {
 		// use menu.val to access user input value 
 		var recipient = Number(menu.val);
+		let session = getSession(menu.args.sessionId);
+		session.set('recipient', recipient);
 		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
 			menu.end('Airtime bought successfully.');
 		}); */
-		menu.end("Person to receive the money " + recipient);
+		menu.con("Please Provide your PIN number: ");
+	},
+	next: {
+		'*\\d+': 'sendMoney.send'
 	}
+});
+
+menu.state('sendMoney.send', {
+	run: () => {
+		// use menu.val to access user input value 
+		var pin = Number(menu.val);
+		var session = getSession(menu.args.sessionId);
+		var recipient = session.get('recipient');
+		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
+			menu.end('Airtime bought successfully.');
+		}); */
+		// menu.con("Please Provide your PIN number: ");
+		menu.end("your phone number is: " + recipient);
+	},
+	/* next: {
+		'*\\d+': 'sendMoney.send'
+	} */
 });
 
 menu.state('buyAirtime', {
