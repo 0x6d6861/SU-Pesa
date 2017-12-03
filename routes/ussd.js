@@ -40,17 +40,14 @@ menu.sessionConfig({
 	}
 });
 
-// Define menu states 
 menu.startState({
-	run: () => {
-		// use menu.con() to send response without terminating session       
+	run: () => {      
 		menu.con('Welcome to SUPesa. Choose option:' +
 			'\n1. Send Money' +
 			'\n2. Withdraw Cash' +
 			'\n3. Deposit Cash' +
 			'\n4. Show Balance');
 	},
-	// next object links to next state based on user input 
 	next: {
 		'1': 'sendMoney',
 		'2': 'withdrawCash',
@@ -64,11 +61,6 @@ menu.startState({
 // === Send Money section
 menu.state('sendMoney', {
 	run: () => {
-		// fetch balance 
-		/* fetchBalance(menu.args.phoneNumber).then(function (bal) {
-			// use menu.end() to send response and terminate session 
-			menu.end('Your balance is KES ' + bal);
-		}); */
 		menu.con("Enter recipient phone number: ")
 	},
 	next: {
@@ -77,13 +69,12 @@ menu.state('sendMoney', {
 });
 menu.state('sendMoney.recipient', {
 	run: () => {
-		// use menu.val to access user input value
 		/* var phoneNumber = phoneUtil.parse(Number(menu.val), 'KE');
 		var recipient = phoneUtil.format(phoneNumber, PNF.E164); */
 		var recipient = "+254" + Number(menu.val);
 		console.log(recipient);
 		menu.session.set('recipient', recipient, (err) => {
-			menu.con("Please Provide your PIN number: ");
+			menu.con("Please enter the amount to send: ");
 		});
 		
 	},
@@ -94,14 +85,10 @@ menu.state('sendMoney.recipient', {
 
 menu.state('sendMoney.amount', {
 	run: () => {
-		// use menu.val to access user input value 
 		var amount = Number(menu.val);
 		menu.session.set('amount', amount, (err) => {
-			menu.con("Please enter the amount to send: ");
+			menu.con("Please provide your PIN: ");
 		});
-		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
-			menu.end('Airtime bought successfully.');
-		}); */
 
 	},
 	next: {
@@ -111,7 +98,6 @@ menu.state('sendMoney.amount', {
 
 menu.state('sendMoney.send', {
 	run: () => {
-		// use menu.val to access user input value 
 		var pin = Number(menu.val);
 		menu.session.get('recipient').then(recipient => {
 			console.log(recipient);
@@ -124,24 +110,22 @@ menu.state('sendMoney.send', {
 					amount: amount,
 					to: recipient
 				}).then(function (response) {
-					menu.end("KSH" + amount + " sent to " + response.data.to.name +"\nCode: " + response.data.code);
+					if(response.data.success){
+						menu.end("KSH" + amount + " sent to " + response.data.to.name + "\nCode: " + response.data.code);
+					}else {
+						menu.end(response.data.message);
+					}
+					
 
 						// console.log(response);
 				}).catch(function (error) {
-					console.log(error);
+					menu.end(error.message);
 				});
 			})
 			
         });
-		/* buyAirtime(menu.args.phoneNumber, amount).then(function (res) {
-			menu.end('Airtime bought successfully.');
-		}); */
-		// menu.con("Please Provide your PIN number: ");
 		
 	},
-	/* next: {
-		'*\\d+': 'sendMoney.send'
-	} */
 });
 // === END Send money section
 
@@ -184,13 +168,17 @@ menu.state('withdrawCash.send', {
 					type: "withdrawal",
 					amount: amount
 				}).then(function (response) {
-				menu.end("You have removed: KSH" + amount + "from your account\nCode: " + response.data.code);
+					if(response.data.success){
+
+						menu.end("You have removed: KSH" + amount + "from your account\nCode: " + response.data.code);
+					}else{
+						menu.end(response.data.message);
+					}
 					// console.log(response);
 				}).catch(function (error) {
-					console.log(error);
+					menu.end(error.message);
 				});
 			})
-			//menu.end("your phone number is: " + recipient);
 		});
 	}
 });
@@ -224,7 +212,6 @@ menu.state('depositCash.amount', {
 });
 menu.state('depositCash.send', {
 	run: () => {
-		// use menu.val to access user input value 
 		var pin = Number(menu.val);
 		menu.session.get('amount').then(amount => {
 			axios.post('/accounts/transact', {
@@ -233,12 +220,16 @@ menu.state('depositCash.send', {
 				type: "deposit",
 				amount: amount
 			}).then(function (response) {
-				menu.end("You have deposited: KSH" + amount + "\nCode: " + response.data.code);
+				if(response.data.success){
+
+					menu.end("You have deposited: KSH" + amount + "\nCode: " + response.data.code);
+				}else{
+					menu.end(response.data.message);
+				}
 				//console.log(response);
 			}).catch(function (error) {
-				console.log(error);
+				menu.end(error.message);
 			});
-			//menu.end("your phone number is: " + recipient);
 		});
 	}
 });
@@ -256,20 +247,31 @@ menu.state('showBalance', {
 
 menu.state('showBalance.send', {
 	run: () => {
-		// use menu.val to access user input value 
 		var pin = Number(menu.val);
 		axios.get('/subscribers/profile', {
 			pin: pin,
 			phoneNumber: menu.args.phoneNumber
 		}).then(function (response) {
-			//menu.end("Name: " + response.data.name + "\nBalance: " + response.data.account.amount)
-			console.log(response.data);
+			if(response.data.success){
+
+				menu.end("Name: " + response.data.subscriber.name + "\nBalance: " + response.data.account.amount);
+			}else{
+				menu.end(response.data.subscriber.message);
+			}
+			// console.log(response.data);
 		}).catch(function (error) {
-			console.log(error);
+			menu.end(error.message);
 		});
 	}
 });
 // === END Show Balance section
+
+
+menu.state('invalidOption', {
+	run: () => {
+		menu.con("Sorry you option was not understood")
+	},
+});
 
 router.post('/', (req, res, next) => {
 	menu.run(req.body, ussdResult => {

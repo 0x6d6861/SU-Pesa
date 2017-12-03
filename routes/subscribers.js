@@ -55,10 +55,11 @@ router.get('/profile', function (req, res, next) {
         columns: ['id', 'name', 'phoneNumber']
     })
         .then(function (subscriber) {
-            res.send(subscriber);
+            res.send({success: true, subscriber: subscriber});
         }).catch(function (error) {
             console.log(error);
-            res.send('An error occured');
+            res.send({ success: false, message: "An Error occured!" });
+nd('An error occured');
         });
 });
 
@@ -96,7 +97,8 @@ router.post('/new', function (req, res, next) {
             res.send(subscriber);
         }).catch(function (error) {
             console.log(error);
-            res.send('An error occured');
+            res.send({ success: false, message: "An Error occured!" });
+nd('An error occured');
         });
 });
 

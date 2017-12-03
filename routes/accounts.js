@@ -69,7 +69,13 @@ router.post('/transact', function(req, res, next) {
                             }).fetch().then(function(TO_subscriber){
                                     
                                 if(!TO_subscriber){
-                                    res.send({success: false, message: "The subscriber does not exist!"});
+                                    account.save({ amount: params.amount - amount }, {
+                                        method: 'update',
+                                        patch: true
+                                    }).then(function (account) {
+                                        res.send({ success: false, message: "The subscriber does not exist!" });
+                                    });
+                                    
                                 }
                                 
                                  new Account({
@@ -167,7 +173,7 @@ router.post('/transact', function(req, res, next) {
             });
     }).catch(function(error) {
       console.log(error);
-      res.send('An error occured');
+      res.send({success: false, message: "An Error occured!"});
     });
 });
 
@@ -198,7 +204,7 @@ router.get('/transactions', function (req, res, next) {
             });
     }).catch(function(error) {
       console.log(error);
-      res.send('An error occured');
+        res.send({ success: false, message: "An Error occured!" });
     });
 });
 
